@@ -11,6 +11,7 @@
         button { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #007AFF; color: white; font-size: 16px; margin: 8px 0; }
         textarea, input[type="file"] { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 12px; margin: 8px 0; font-size: 16px; }
         img { max-width: 100%; border-radius: 12px; margin-top: 12px; }
+        .loading { text-align: center; color: #666; }
     </style>
 </head>
 <body>
@@ -29,13 +30,19 @@
         <div id="resultImage"></div>
     </div>
 
+    <!-- 引入 Replicate JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/replicate-js@latest/dist/replicate.min.js"></script>
+
     <script>
-        // 你的 Replicate API Token 已填入
-        const REPLICATE_API_TOKEN = 'r8_EL0jRe8ca46tq8zkvi6wGMb5bVa4FMy45bWDB';
+        // 初始化 Replicate 客户端
+        const replicate = new Replicate({
+            token: 'r8_EL0jRe8ca46tq8zkvi6wGMb5bVa4FMy45bWDB'
+        });
 
         async function editImage() {
             const file = document.getElementById('imageInput').files[0];
             const prompt = document.getElementById('prompt').value;
+            const resultDiv = document.getElementById('resultImage');
             
             if (!file || !prompt) {
                 alert('请先上传图片并输入提示词！');
@@ -49,44 +56,31 @@
             };
             reader.readAsDataURL(file);
 
+            // 显示加载中
+            resultDiv.innerHTML = '<div class="loading">AI 正在处理中，请稍候...</div>';
+
             try {
-                // 调用 Replicate API
-                const response = await fetch('https://api.replicate.com/v1/predictions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Token ${REPLICATE_API_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        version: "a1564e1fa1b72e86c056204392f94217e512d2d26fc1c6a5a602e6a2ee720aee",
+                // 使用 Replicate SDK 运行模型
+                const prediction = await replicate.run(
+                    "stability-ai/stable-diffusion-img2img-ultra:b160b9e0d3f62333f21b62cf71ed9319232f06ff2264ce6d823e2ff53126adad",
+                    {
                         input: {
                             image: await fileToDataURL(file),
                             prompt: prompt,
                             strength: 0.3
                         }
-                    })
-                });
+                    }
+                );
 
-                const data = await response.json();
-                
-                // 轮询获取结果
-                let prediction = data;
-                while (prediction.status !== 'succeeded' && prediction.status !== 'failed') {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const res = await fetch(prediction.urls.get, {
-                        headers: { 'Authorization': `Token ${REPLICATE_API_TOKEN}` }
-                    });
-                    prediction = await res.json();
-                }
-
-                if (prediction.status === 'succeeded') {
-                    document.getElementById('resultImage').innerHTML = `<img src="${prediction.output[0]}">`;
+                // 显示结果
+                if (prediction && prediction.length > 0) {
+                    resultDiv.innerHTML = `<img src="${prediction[0]}">`;
                 } else {
-                    alert('AI 处理失败，请重试！');
+                    resultDiv.innerHTML = '<div class="loading">AI 处理失败，请重试！</div>';
                 }
             } catch (error) {
-                alert('网络错误，请检查网络后重试！');
-                console.error(error);
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="loading">网络错误: ${error.message}</div>`;
             }
         }
 
