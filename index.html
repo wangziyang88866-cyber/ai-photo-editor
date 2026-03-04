@@ -1,97 +1,163 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 照片编辑器</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f5f5f7; }
-        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #007AFF; color: white; font-size: 16px; margin: 8px 0; }
-        textarea, input[type="file"] { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 12px; margin: 8px 0; font-size: 16px; }
-        img { max-width: 100%; border-radius: 12px; margin-top: 12px; }
-        .loading { text-align: center; color: #666; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 照片编辑器</title>
+
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f5f7;
+}
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: #007AFF;
+    color: white;
+    font-size: 16px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+textarea, input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e5e5ea;
+    border-radius: 12px;
+    margin: 8px 0;
+    font-size: 16px;
+}
+img {
+    max-width: 100%;
+    border-radius: 12px;
+    margin-top: 12px;
+}
+.loading {
+    text-align: center;
+    color: #666;
+}
+</style>
 </head>
+
 <body>
-    <div class="card">
-        <h1>🤖 AI 照片编辑器</h1>
-        <input type="file" id="imageInput" accept="image/*">
-        <textarea id="prompt" rows="2" placeholder="输入你想要的效果，例如：高清，蓝天，人像美白"></textarea>
-        <button onclick="editImage()">✨ AI 编辑图片</button>
-    </div>
-    <div class="card">
-        <h3>原图</h3>
-        <div id="originalImage"></div>
-    </div>
-    <div class="card">
-        <h3>AI 处理后</h3>
-        <div id="resultImage"></div>
-    </div>
 
-    <!-- 引入 Replicate JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/replicate-js@latest/dist/replicate.min.js"></script>
+<div class="card">
+    <h1>🤖 AI 照片编辑器</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <textarea id="prompt" rows="2"
+        placeholder="输入你想要的效果，例如：高清，蓝天，人像美白"></textarea>
+    <button id="editBtn">✨ AI 编辑图片</button>
+</div>
 
-    <script>
-        // 初始化 Replicate 客户端
-        const replicate = new Replicate({
-            token: 'r8_EL0jRe8ca46tq8zkvi6wGMb5bVa4FMy45bWDB'
-        });
+<div class="card">
+    <h3>原图</h3>
+    <div id="originalImage"></div>
+</div>
 
-        async function editImage() {
-            const file = document.getElementById('imageInput').files[0];
-            const prompt = document.getElementById('prompt').value;
-            const resultDiv = document.getElementById('resultImage');
-            
-            if (!file || !prompt) {
-                alert('请先上传图片并输入提示词！');
-                return;
-            }
+<div class="card">
+    <h3>AI 处理后</h3>
+    <div id="resultImage"></div>
+</div>
 
-            // 显示原图a
-            const reader = new FileReader();
-            reader.onload = e => {
-                document.getElementById('originalImage').innerHTML = `<img src="${e.target.result}">`;
-            };
-            reader.readAsDataURL(file);
+<!-- 先加载 SDK -->
+<script src="https://cdn.jsdelivr.net/npm/replicate-js@latest/dist/replicate.min.js"></script>
 
-            // 显示加载中
-            resultDiv.innerHTML = '<div class="loading">AI 正在处理中，请稍候...</div>';
+<script>
+window.addEventListener("load", function () {
 
-            try {
-                // 使用 Replicate SDK 运行模型
-                const prediction = await replicate.run(
-                    "stability-ai/stable-diffusion-img2img-ultra:b160b9e0d3f62333f21b62cf71ed9319232f06ff2264ce6d823e2ff53126adad",
-                    {
-                        input: {
-                            image: await fileToDataURL(file),
-                            prompt: prompt,
-                            strength: 0.3
-                        }
+    if (typeof Replicate === "undefined") {
+        alert("Replicate SDK 加载失败，请刷新页面");
+        return;
+    }
+
+    const replicate = new Replicate({
+        token: "你的token"
+    });
+
+    const editBtn = document.getElementById("editBtn");
+    const resultDiv = document.getElementById("resultImage");
+
+    editBtn.addEventListener("click", editImage);
+
+    async function editImage() {
+
+        const file = document.getElementById("imageInput").files[0];
+        const prompt = document.getElementById("prompt").value;
+
+        if (!file || !prompt) {
+            alert("请先上传图片并输入提示词！");
+            return;
+        }
+
+        // 显示原图
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById("originalImage").innerHTML =
+                `<img src="${e.target.result}">`;
+        };
+        reader.readAsDataURL(file);
+
+        resultDiv.innerHTML =
+            '<div class="loading">AI 正在处理中，请稍候...</div>';
+
+        try {
+
+            const base64Image = await fileToDataURL(file);
+
+            const output = await replicate.run(
+                "stability-ai/stable-diffusion-img2img-ultra",
+                {
+                    input: {
+                        image: base64Image,
+                        prompt: prompt,
+                        strength: 0.3
                     }
-                );
-
-                // 显示结果
-                if (prediction && prediction.length > 0) {
-                    resultDiv.innerHTML = `<img src="${prediction[0]}">`;
-                } else {
-                    resultDiv.innerHTML = '<div class="loading">AI 处理失败，请重试！</div>';
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                resultDiv.innerHTML = `<div class="loading">网络错误: ${error.message}</div>`;
-            }
-        }
+            );
 
-        function fileToDataURL(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
+            if (Array.isArray(output) && output.length > 0) {
+                resultDiv.innerHTML =
+                    `<img src="${output[0]}">`;
+            } else {
+                resultDiv.innerHTML =
+                    '<div class="loading">AI 处理失败，请重试</div>';
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            resultDiv.innerHTML =
+                `<div class="loading">
+                出错了：${error.message}<br>
+                如果提示 Failed to fetch，那是 CORS 限制
+                </div>`;
         }
-    </script>
+    }
+
+    function fileToDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+});
+</script>
+
 </body>
 </html>
