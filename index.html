@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>AI 照片编辑器</title>
-
 <style>
 * { box-sizing: border-box; }
 body {
@@ -50,14 +49,12 @@ img {
 }
 </style>
 </head>
-
 <body>
 
 <div class="card">
     <h1>🤖 AI 照片编辑器</h1>
     <input type="file" id="imageInput" accept="image/*">
-    <textarea id="prompt" rows="2"
-        placeholder="输入你想要的效果，例如：高清，蓝天，人像美白"></textarea>
+    <textarea id="prompt" rows="2" placeholder="输入你想要的效果，例如：高清，蓝天，人像美白"></textarea>
     <button id="editBtn">✨ AI 编辑图片</button>
 </div>
 
@@ -71,28 +68,23 @@ img {
     <div id="resultImage"></div>
 </div>
 
-<!-- 先加载 SDK -->
+<!-- 加载 Replicate SDK -->
 <script src="https://cdn.jsdelivr.net/npm/replicate-js@latest/dist/replicate.min.js"></script>
 
 <script>
-window.addEventListener("load", function () {
-
+window.addEventListener("load", () => {
     if (typeof Replicate === "undefined") {
-        alert("Replicate SDK 加载失败，请刷新页面");
+        alert("Replicate SDK 加载失败，请检查网络！");
         return;
     }
 
-    const replicate = new Replicate({
-        token: "你的token"
-    });
+    // ⚠️ 个人使用，可以直接写 token
+    const replicate = new Replicate({ token: "r8_HbGeaRUr8XWWu78dGq9WEjUD9WldvQM0kOlNG" }); // <-- 替换为你的 Replicate API token
 
     const editBtn = document.getElementById("editBtn");
     const resultDiv = document.getElementById("resultImage");
 
-    editBtn.addEventListener("click", editImage);
-
-    async function editImage() {
-
+    editBtn.addEventListener("click", async () => {
         const file = document.getElementById("imageInput").files[0];
         const prompt = document.getElementById("prompt").value;
 
@@ -104,60 +96,43 @@ window.addEventListener("load", function () {
         // 显示原图
         const reader = new FileReader();
         reader.onload = e => {
-            document.getElementById("originalImage").innerHTML =
-                `<img src="${e.target.result}">`;
+            document.getElementById("originalImage").innerHTML = `<img src="${e.target.result}">`;
         };
         reader.readAsDataURL(file);
 
-        resultDiv.innerHTML =
-            '<div class="loading">AI 正在处理中，请稍候...</div>';
+        resultDiv.innerHTML = '<div class="loading">AI 正在处理中，请稍候...</div>';
 
         try {
+            // 转 Base64
+            const base64Image = await new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = e => resolve(e.target.result);
+                r.onerror = reject;
+                r.readAsDataURL(file);
+            });
 
-            const base64Image = await fileToDataURL(file);
-
+            // 调用 Replicate API
             const output = await replicate.run(
                 "stability-ai/stable-diffusion-img2img-ultra",
-                {
-                    input: {
-                        image: base64Image,
-                        prompt: prompt,
-                        strength: 0.3
-                    }
-                }
+                { input: { image: base64Image, prompt, strength: 0.3 } }
             );
 
             if (Array.isArray(output) && output.length > 0) {
-                resultDiv.innerHTML =
-                    `<img src="${output[0]}">`;
+                resultDiv.innerHTML = `<img src="${output[0]}">`;
             } else {
-                resultDiv.innerHTML =
-                    '<div class="loading">AI 处理失败，请重试</div>';
+                resultDiv.innerHTML = '<div class="loading">AI 处理失败，请重试</div>';
             }
 
-        } catch (error) {
-
-            console.error(error);
-
-            resultDiv.innerHTML =
-                `<div class="loading">
-                出错了：${error.message}<br>
-                如果提示 Failed to fetch，那是 CORS 限制
-                </div>`;
+        } catch (err) {
+            console.error(err);
+            resultDiv.innerHTML = `<div class="loading">出错：${err.message}</div>`;
         }
-    }
-
-    function fileToDataURL(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-
+    });
 });
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
